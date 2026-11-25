@@ -216,6 +216,7 @@ def extract_strong_rules(rules,frequent_itemsets,total_transactions,min_confiden
 
             if   lift == 1:
                 relation = "independent"
+                
             elif lift > 1:
                 relation = "dependent, + correlated"
             else:
