@@ -175,19 +175,18 @@ def extract_strong_rules(rules,frequent_itemsets,total_transactions,min_confiden
     for rule in rules:
         ant = rule["antecedent"]
         cons = rule["consequent"]
-        # replace left side (antecedent [if]) and right side (consequent [then]) into shorter names
 
         ant_list = list(ant)
         ant_list.sort()
-        ant_key = tuple(ant_list) #the denominator of the confidence
+        ant_key = tuple(ant_list)
 
         cons_list = list(cons)
         cons_list.sort()
-        cons_key = tuple(cons_list) #used to get the support of Y denominator in lift
+        cons_key = tuple(cons_list)
 
         union_list = ant_list + cons_list
         union_list.sort()
-        union_key = tuple(union_list) #used to get the numerator of the support and confidence
+        union_key = tuple(union_list)
 
         if (ant_key not in frequent_itemsets
             or cons_key not in frequent_itemsets
@@ -205,14 +204,14 @@ def extract_strong_rules(rules,frequent_itemsets,total_transactions,min_confiden
         support = union_count / total_transactions
         confidence = union_count / ant_count
 
-        #keep only rules meeting both min sup and min conf
+
         if support >= min_support and confidence >= min_confidence:
 
 
-            ant_support = ant_count / total_transactions  # needed for the lift
-            cons_support = cons_count / total_transactions  #needed for the lift
+            ant_support = ant_count / total_transactions
+            cons_support = cons_count / total_transactions
 
-            #lift(x->y) = support(x & y)/ support(x) * support(y)
+           
             lift = support / (ant_support * cons_support)
 
             if   lift == 1:
