@@ -3,6 +3,8 @@ import math
 from collections import defaultdict
 from itertools import combinations
 
+from openpyxl.chartsheet import relation
+
 
 # 1. Read Excel file
 
@@ -21,7 +23,6 @@ def read_transactions():
     return transactions
 
 
-# 2. Build FP-Tree
 
 def build_tree(transactions, min_count):
 
@@ -94,7 +95,7 @@ def print_tree(node, level=0):
         print_tree(child, level + 1)
 
 
-# 4. conditional pattern base: every path that ends with this item
+# conditional pattern base: every path that ends with this item
 
 def find_paths(node, item, path, paths):
 
@@ -112,7 +113,7 @@ def find_paths(node, item, path, paths):
             find_paths(child, item, path + [child_item], paths)
 
 
-# 5. FP-Growth: Find Frequent Itemsets
+# 4. FP-Growth: Find Frequent Itemsets
 
 def mine_tree(root, frequent, min_count, frequent_itemsets, suffix=()):
 
@@ -133,7 +134,7 @@ def mine_tree(root, frequent, min_count, frequent_itemsets, suffix=()):
             mine_tree(new_root, new_frequent, min_count, frequent_itemsets, new_pattern)
 
 
-# 6. Generate Association Rules and Lift
+# 5. Generate Association Rules and Lift
 
 
 from itertools import combinations
@@ -165,7 +166,78 @@ def generate_rules(frequent_itemsets):
 
     return rules
 
-# 7. Run Algorithm
+
+# 6 & 7 extract string rules and lift
+def extract_strong_rules(rules,frequent_itemsets,total_transactions,min_confidence,min_support):
+
+    strong_rules = []
+
+    for rule in rules:
+        ant = rule["antecedent"]
+        cons = rule["consequent"]
+        # replace left side (antecedent [if]) and right side (consequent [then]) into shorter names
+
+        ant_list = list(ant)
+        ant_list.sort()
+        ant_key = tuple(ant_list) #the denominator of the confidence
+
+        cons_list = list(cons)
+        cons_list.sort()
+        cons_key = tuple(cons_list) #used to get the support of Y denominator in lift
+
+        union_list = ant_list + cons_list
+        union_list.sort()
+        union_key = tuple(union_list) #used to get the numerator of the support and confidence
+
+        if (ant_key not in frequent_itemsets
+            or cons_key not in frequent_itemsets
+            or union_key not in frequent_itemsets
+        ):
+            continue
+
+        ant_count = frequent_itemsets[ant_key]
+        cons_count = frequent_itemsets[cons_key]
+        union_count = frequent_itemsets[union_key]
+
+
+
+        #compute support and confidence for X -> Y
+        support = union_count / total_transactions
+        confidence = union_count / ant_count
+
+        #keep only rules meeting both min sup and min conf
+        if support >= min_support and confidence >= min_confidence:
+
+
+            ant_support = ant_count / total_transactions  # needed for the lift
+            cons_support = cons_count / total_transactions  #needed for the lift
+
+            #lift(x->y) = support(x & y)/ support(x) * support(y)
+            lift = support / (ant_support * cons_support)
+
+            if   lift == 1:
+                relation = "independent"
+            elif lift > 1.0:
+                relation = "dependent, + correlated"
+            else:
+                relation = "dependent, - correlated"
+
+            strong_rules.append({
+                "antecedent": ant,
+                "consequent": cons,
+                "support": support,
+                "confidence": confidence,
+                "lift": lift,
+                "relation": relation,
+            })
+
+    return strong_rules
+
+
+
+
+
+# 8. Run Algorithm
 
 transactions = read_transactions()
 
