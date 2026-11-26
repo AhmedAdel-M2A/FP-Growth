@@ -2,7 +2,6 @@ import openpyxl
 import math
 from collections import defaultdict
 from itertools import combinations
-
 from openpyxl.chartsheet import relation
 
 
@@ -115,29 +114,34 @@ def find_paths(node, item, path, paths):
 
 # 4. FP-Growth: Find Frequent Itemsets
 
-def mine_tree(root, frequent, min_count, frequent_itemsets, suffix=()):
+def mine_tree(root, frequent,min_support_count, frequent_itemsets, suffix=()):
 
-    # least frequent item first
-    for item in sorted(frequent, key=lambda x: (frequent[x], x)):
+    # only get the keys (letters) form the frequent dict
+    items = list(frequent.keys())
 
+    items.sort(key = lambda item: (frequent[item], item))
+
+    for item in items :
         new_pattern = suffix + (item,)
 
-        frequent_itemsets[tuple(sorted(new_pattern))] = frequent[item]
+        # make the pattern in a key form then save the pattern in the freq_itemset
+        pattern_itemsets= tuple(sorted(new_pattern))
+        frequent_itemsets[pattern_itemsets] = frequent[item]
 
+        # search for all paths ends with (item) and save them in (paths)
         paths = []
+        find_paths(root , item , [], paths)
 
-        find_paths(root, item, [], paths)
+        #build new conditional tree and recurs again until the root is null
+        new_root, new_frequent = build_tree(paths, min_support_count)
 
-        new_root, new_frequent = build_tree(paths, min_count)
-
-        if new_root is not None:
-            mine_tree(new_root, new_frequent, min_count, frequent_itemsets, new_pattern)
+        if new_root is not None and new_frequent:
+            mine_tree(new_root,new_frequent, min_support_count,frequent_itemsets, new_pattern)
 
 
 # 5. Generate Association Rules and Lift
 
 
-from itertools import combinations
 
 def generate_rules(frequent_itemsets):
 
@@ -178,24 +182,24 @@ def extract_strong_rules(rules,frequent_itemsets,total_transactions,min_confiden
 
         ant_list = list(ant)
         ant_list.sort()
-        ant_key = tuple(ant_list)
+        ant_itemset = tuple(ant_list)
 
         cons_list = list(cons)
         cons_list.sort()
-        cons_key = tuple(cons_list)
+        cons_itemset = tuple(cons_list)
 
         union_list = ant_list + cons_list
         union_list.sort()
         union_key = tuple(union_list)
 
-        if (ant_key not in frequent_itemsets
-            or cons_key not in frequent_itemsets
+        if (ant_itemset not in frequent_itemsets
+            or cons_itemset not in frequent_itemsets
             or union_key not in frequent_itemsets
         ):
             continue
 
-        ant_count = frequent_itemsets[ant_key]
-        cons_count = frequent_itemsets[cons_key]
+        ant_count = frequent_itemsets[ant_itemset]
+        cons_count = frequent_itemsets[cons_itemset]
         union_count = frequent_itemsets[union_key]
 
 
@@ -216,7 +220,7 @@ def extract_strong_rules(rules,frequent_itemsets,total_transactions,min_confiden
 
             if   lift == 1:
                 relation = "independent"
-                
+
             elif lift > 1:
                 relation = "dependent, + correlated"
             else:
